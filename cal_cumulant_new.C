@@ -94,9 +94,6 @@ void balance_main(void) {
     int num_tracks;
     float weight;
 
-
-
-
     myDisplay=1000000;
     myLocal=0;
     totalNumberOfEvents=0;
