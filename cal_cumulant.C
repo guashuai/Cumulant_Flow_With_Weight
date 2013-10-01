@@ -71,6 +71,7 @@ TProfile *T18Hist;
 	
 // Prototypes
 void balance_main(void);
+void QC_Partcle_Weight(void);
 //void initCanvas(void);
 void initHists(void);
 //void showItAll();
@@ -151,40 +152,40 @@ void balance_main(void){
 
 			if((fabs(VertexZ)<30)&&(num_tracks>3)){
 
-			// ref cumulants
-    		Double_t M       = num_tracks;
-    		Double_t nComb1  = M;
-    		Double_t nComb2  = M * (M-1);
-    		Double_t nComb3  = M * (M-1) * (M-2);
-    		Double_t nComb4  = M * (M-1) * (M-2) * (M-3);
+                            // ref cumulants
+                            Double_t M       = num_tracks;
+                            Double_t nComb1  = M;
+                            Double_t nComb2  = M * (M-1);
+                            Double_t nComb3  = M * (M-1) * (M-2);
+                            Double_t nComb4  = M * (M-1) * (M-2) * (M-3);
     
-		    TComplex Q2(cos2phiSum, sin2phiSum);
-		    TComplex Q4(cos4phiSum, sin4phiSum);
-		    TComplex Q2Star   = TComplex::Conjugate(Q2);
-			TComplex Q4Star   = TComplex::Conjugate(Q4);
+                            TComplex Q2(cos2phiSum, sin2phiSum);
+                            TComplex Q4(cos4phiSum, sin4phiSum);
+                            TComplex Q2Star   = TComplex::Conjugate(Q2);
+                            TComplex Q4Star   = TComplex::Conjugate(Q4);
         
-    		Double_t Q2Square = Q2.Rho2();
-    		Double_t Q4Square = Q4.Rho2();
-    		Double_t ReQQQ    = (Q4 * Q2Star * Q2Star).Re();
+                            Double_t Q2Square = Q2.Rho2();
+                            Double_t Q4Square = Q4.Rho2();
+                            Double_t ReQQQ    = (Q4 * Q2Star * Q2Star).Re();
 
-    		Double_t coor22   = (Q2Square - M);
-    		Double_t coor24   = (Q2Square*Q2Square + Q4Square - 2*ReQQQ
-                         - 4*(M-2)*Q2Square + 2*M*(M-3));
-    		TComplex C7_8     = Q2 * Q2 - Q4;
-    		TComplex C9_10    = Q2*Q2Star*Q2Star - Q2*Q4Star - 2*(M-1)*Q2Star;
+                            Double_t coor22   = (Q2Square - M);
+                            Double_t coor24   = (Q2Square*Q2Square + Q4Square - 2*ReQQQ
+                                                 - 4*(M-2)*Q2Square + 2*M*(M-3));
+                            TComplex C7_8     = Q2 * Q2 - Q4;
+                            TComplex C9_10    = Q2*Q2Star*Q2Star - Q2*Q4Star - 2*(M-1)*Q2Star;
 
-			C2Hist->Fill(refMult,Q2.Re()/nComb1);
-			C3Hist->Fill(refMult,Q2.Im()/nComb1);
-			T16Hist->Fill(refMult,coor22/nComb2);
-			C7Hist->Fill(refMult,C7_8.Re()/nComb2);
-			C8Hist->Fill(refMult,C7_8.Im()/nComb2);
-			C9Hist->Fill(refMult,C9_10.Re()/nComb3);
-			C10Hist->Fill(refMult,C9_10.Im()/nComb3);
-			T18Hist->Fill(refMult,coor24/nComb4);
+                            C2Hist->Fill(refMult,Q2.Re()/nComb1);
+                            C3Hist->Fill(refMult,Q2.Im()/nComb1);
+                            T16Hist->Fill(refMult,coor22/nComb2);
+                            C7Hist->Fill(refMult,C7_8.Re()/nComb2);
+                            C8Hist->Fill(refMult,C7_8.Im()/nComb2);
+                            C9Hist->Fill(refMult,C9_10.Re()/nComb3);
+                            C10Hist->Fill(refMult,C9_10.Im()/nComb3);
+                            T18Hist->Fill(refMult,coor24/nComb4);
     
 	
-			refMultHist->Fill(refMult);
-			ZDCHist->Fill(zdcUnAttenuatedEast+zdcUnAttenuatedWest);
+                            refMultHist->Fill(refMult);
+                            ZDCHist->Fill(zdcUnAttenuatedEast+zdcUnAttenuatedWest);
 			
 			}
 			
@@ -203,6 +204,12 @@ void balance_main(void){
 	saveFile.Close();
 	
 
+}
+
+void QC_Partcle_Weight(void)
+{
+    // read in data
+    
 }
 
 void cal_v2(){
