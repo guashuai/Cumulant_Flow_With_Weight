@@ -21,8 +21,6 @@
 
 using namespace std;
 #endif
-
-
 //  Canvas and pads
 TCanvas *c;
 //  Histograms
