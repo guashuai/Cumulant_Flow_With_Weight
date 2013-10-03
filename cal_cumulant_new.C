@@ -22,6 +22,7 @@
 using namespace std;
 #endif
 
+#define PARTICLE_WEIGHT
 
 //  Canvas and pads
 TCanvas *c;
@@ -86,13 +87,23 @@ void balance_main(void) {
     int myDisplay;
     int myLocal;
 
+#ifdef PARTICLE_WEIGHT
+    float weight;
+    const int nMax = 5;
+    const int kMax = 5;
+    const int pMax = 5;
+    
+    TComplex Q[nMax][kMax];     // Q_{n, k} = \sum w_i^k exp(i n \phi_i)
+    TComplex QStar[nMax][kMax];     // complex conjugate of Q
+    double   S[pMax][kMax];     // S_{p, k} = (\sum w_i^k)^p
+#else    
     double sin2phiSum;
     double cos2phiSum;
     double sin4phiSum;
     double cos4phiSum;
+#endif // m    
     //  Numbers for each event
     int num_tracks;
-    float weight;
 
     myDisplay=1000000;
     myLocal=0;
@@ -158,10 +169,25 @@ void balance_main(void) {
 
             Multiplicity=0;
             num_tracks=0;
+
+#ifdef PARTICLE_WEIGHT
+            for (int n = 0; n < nMax; ++n) {
+                for (int k = 0; k < kMax; ++k) {
+                    Q[n][k] = TComplex(0, 0);
+                }
+            }
+
+            for (int p = 0; p < pMax; ++n) {
+                for (int k = 0; k < kMax; ++k) {
+                    S[p][k] = 0.0;
+                }
+            }
+#else
             sin2phiSum=0.0;
             cos2phiSum=0.0;
             sin4phiSum=0.0;
             cos4phiSum=0.0;
+#endif // PARTICLE_WEIGHT 
             for(iEvent=0; iEvent<goodMult; iEvent++) { // loop of tracks in each event
 
                 fread(&PID,sizeof(short),1,fd);
@@ -175,20 +201,78 @@ void balance_main(void) {
                 if(fabs(eta)<1.0) Multiplicity++;
 
                 if((pt > 0.2) && (pt < 2.0) && (fabs(eta) < 1.0)) {
+
+#ifdef PARTICLE_WEIGHT
                     weight = getWeight(pt,eta,phi,mySagita,myCentral); // read each track's weight
+
+                    for (int n = 0; n < nMax; ++n) {
+                        for (int k = 0; k < kMax; ++k) {
+                            Q[n][k] += TMath::Power(weight, k) * TComplex(1, n*phi); // TODO, optimize speed
+                        }
+                    }
+
+                    for (int p = 0; p < pMax; ++n) { // S matrix is not ready
+                        for (int k = 0; k < kMax; ++k) {
+                            S[p][k] += TMath::Power(weight, k); // TODO, optimize speed
+                        }
+                    }
+                    
+#else
                     sin2phiSum+=sin(2.0*phi);
                     cos2phiSum+=cos(2.0*phi);
                     sin4phiSum+=sin(4.0*phi);
                     cos4phiSum+=cos(4.0*phi);
+#endif // PARTICLE_WEIGHT
+
                     num_tracks++;
                 }
 
+            } // track loop end
+
+#ifdef PARTICLE_WEIGHT
+            for (int n = 0; n < nMax; ++n) {
+                for (int k = 0; k < kMax; ++k) {
+                    QStar[n][k] = TComplex::Conjugate( Q[n][k] );
+                }
             }
 
-
+            for (int p = 0; p < pMax; ++n) { // S matrix is ready
+                for (int k = 0; k < kMax; ++k) {
+                    S[p][k] = TMath::Power(S[p][k], p);
+                }
+            }
+#endif // PARTICLE_WEIGHT
+            
             if((fabs(VertexZ)<30)&&(num_tracks>3)) {
 
-                // ref cumulants
+#ifdef PARTICLE_WEIGHT
+                double M1    = S[1][1];
+                double M11   = S[2][1] - S[1][2];
+                double M111  = S[3][1] - 3*S[1][2]*S[1][1] + 2*S[1]*[3];
+                double M1111 = S[4][1] - 6*S[1][2]*S[2][1] + 8*S[1][3]*S[1][1] + 3*S[2]*[2] - 6*S[1][4];
+
+                double EventWeight1    = 1.0;
+                double EventWeight11   = 1.0;
+                double EventWeight111  = 1.0;
+                double EventWeight1111 = 1.0;
+
+                const int n = 2; // flow harmonics
+                
+                double B8 = ( (Q[n][1]).Rho2() - S[1][2] ) / M11; 
+                double& coor22 = B8; // this is a wrong name, should use eq. number
+
+                double B9 = ( TMath::Power( Q[n][1].Rho(), 4 ) + Q[2*n][2].Rho2() - 2 * (Q[2*n][2]*QStar[n][1]*QStar[n][1]).Re()
+                              + 8 * (Q[n][3]*QStar[n][1]).Re() - 4 * S[1][2] * Q[n][1].Rho()
+                              - 6 * S[1][4] - 2 * S[2][2] ) / M1111;
+                double& coor24 = B9;
+
+                // number of conbination have been divided
+                // apply event weights, just in case non-unit weigts are needed
+                T16Hist->Fill(refMult, coor22, EventWeight11); 
+                T18Hist->Fill(refMult, coor24, EventWeight1111);
+                
+#else
+                // ref cumulants w/o particle weight
                 Double_t M       = num_tracks;
                 Double_t nComb1  = M;
                 Double_t nComb2  = M * (M-1);
@@ -218,7 +302,7 @@ void balance_main(void) {
                 C9Hist->Fill(refMult,C9_10.Re()/nComb3);
                 C10Hist->Fill(refMult,C9_10.Im()/nComb3);
                 T18Hist->Fill(refMult,coor24/nComb4);
-
+#endif  // PARTICLE_WEIGHT
 
                 refMultHist->Fill(refMult);
                 ZDCHist->Fill(zdcUnAttenuatedEast+zdcUnAttenuatedWest);
