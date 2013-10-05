@@ -208,6 +208,7 @@ void balance_main(void) {
                     for (int n = 0; n < nMax; ++n) {
                         for (int k = 0; k < kMax; ++k) {
                             Q[n][k] += TMath::Power(weight, k) * TComplex(1, n*phi); // TODO, optimize speed
+                            Q[n][k] += TMath::Power(weight, k) * TComplex(1, n*phi, kTRUE); // TODO, optimize speed
                         }
                     }
 
