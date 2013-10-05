@@ -23,6 +23,7 @@ using namespace std;
 #endif
 
 #define PARTICLE_WEIGHT
+#define MULT_WEIGHT
 
 //  Canvas and pads
 TCanvas *c;
@@ -88,7 +89,8 @@ void balance_main(void) {
     int myLocal;
 
 #ifdef PARTICLE_WEIGHT
-    float weight;
+    double weight;               // particle weight
+
     const int nMax = 5;
     const int kMax = 5;
     const int pMax = 5;
@@ -216,7 +218,6 @@ void balance_main(void) {
                             S[p][k] += TMath::Power(weight, k); // TODO, optimize speed
                         }
                     }
-                    
 #else
                     sin2phiSum+=sin(2.0*phi);
                     cos2phiSum+=cos(2.0*phi);
@@ -251,13 +252,20 @@ void balance_main(void) {
                 double M111  = S[3][1] - 3*S[1][2]*S[1][1] + 2*S[1]*[3];
                 double M1111 = S[4][1] - 6*S[1][2]*S[2][1] + 8*S[1][3]*S[1][1] + 3*S[2]*[2] - 6*S[1][4];
 
+#ifdef MULT_WEIGHT
+                double EventWeight1    = M1   ;
+                double EventWeight11   = M11  ;
+                double EventWeight111  = M111 ;
+                double EventWeight1111 = M1111;
+#else
                 double EventWeight1    = 1.0;
                 double EventWeight11   = 1.0;
                 double EventWeight111  = 1.0;
                 double EventWeight1111 = 1.0;
+#endif // MULT_WEIGHT
 
                 const int n = 2; // flow harmonics
-                
+
                 double B8 = ( (Q[n][1]).Rho2() - S[1][2] ) / M11; 
                 double& coor22 = B8; // this is a wrong name, should use eq. number
 
@@ -266,11 +274,27 @@ void balance_main(void) {
                               - 6 * S[1][4] - 2 * S[2][2] ) / M1111;
                 double& coor24 = B9;
 
+                TComplex C4_5 = Q[n][1] / M1;
+                TComplex C11  = (Q[n][1]*Q[n][1] - Q[2*n][2]) / M11;
+                TComplex C12  = ( Q[n][1]*QStar[n][1]*QStar[n][1] - Q[n][1]*QStar[2*n][2]
+                                  - 2*S[1][2]*QStar[n][1] + 2*QStar[n][3] ) / M111;
+                
+                // reuse the histograms for the same terms with out particle weights
+                TComplex& C2_3  = C4_5;
+                TComplex& C7_8  = C11;
+                TComplex& C9_10 = C12;
+                
                 // number of conbination have been divided
                 // apply event weights, just in case non-unit weigts are needed
                 T16Hist->Fill(refMult, coor22, EventWeight11); 
                 T18Hist->Fill(refMult, coor24, EventWeight1111);
-                
+
+                C2Hist->Fill(refMult,  C2_3.Re(),  EventWeight1   );
+                C3Hist->Fill(refMult,  C2_3.Im(),  EventWeight1   );
+                C7Hist->Fill(refMult,  C7_8.Re(),  EventWeight11  );
+                C8Hist->Fill(refMult,  C7_8.Im(),  EventWeight11  );
+                C9Hist->Fill(refMult,  C9_10.Re(), EventWeight111 );
+                C10Hist->Fill(refMult, C9_10.Im(), EventWeight111 );
 #else
                 // ref cumulants w/o particle weight
                 Double_t M       = num_tracks;
