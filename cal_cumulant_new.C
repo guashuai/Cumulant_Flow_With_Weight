@@ -684,8 +684,8 @@ void initWeights(int _day){
 	VzHist = (TH1D*)htmp2->Clone();
 	VzHist->SetDirectory(0);
 	htmp2 = (TH1D*)weightFile.Get("refMult");
-	refMultHist = (TH1D*)htmp2->Clone();
-	refMultHist->SetDirectory(0);
+//	refMultHist = (TH1D*)htmp2->Clone();
+//	refMultHist->SetDirectory(0);
 
  for(int i = 0; i<10; i++){
    		for(int j = 0; j<10; j++){
@@ -759,7 +759,7 @@ void showItAll(){
 
 	c->cd(2);
 	gPad->SetLogy(1);
-	refMultHist->Draw();
+//	refMultHist->Draw();
 	
 	
 	c->cd(3);
