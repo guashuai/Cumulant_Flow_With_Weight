@@ -326,7 +326,7 @@ void balance_main(void) {
                 double& coor22 = B8; // this is a wrong name, should use eq. number
 
                 double B9 = ( TMath::Power( Q[n][1].Rho(), 4 ) + Q[2*n][2].Rho2() - 2 * (Q[2*n][2]*QStar[n][1]*QStar[n][1]).Re()
-                              + 8 * (Q[n][3]*QStar[n][1]).Re() - 4 * S[1][2] * Q[n][1].Rho()
+                              + 8 * (Q[n][3]*QStar[n][1]).Re() - 4 * S[1][2] * Q[n][1].Rho2()
                               - 6 * S[1][4] - 2 * S[2][2] ) / M1111;
                 double& coor24 = B9;
 
