@@ -39,6 +39,13 @@ TProfile *C8Hist;
 TProfile *C9Hist;
 TProfile *C10Hist;
 TProfile *T18Hist;
+//  Histograms
+
+TH1D *VzHist;
+TH2D *etaPhiWeightsHist[10][10];
+int Pi=3.14159265;
+int day,dayHold;
+
 
 enum CorrelationTypes {
     C2 = 0, C3, T16, C7, C8, C9, C10, T18,
@@ -46,26 +53,10 @@ enum CorrelationTypes {
     nRefCorr = 8, nDiffCorr = 10
 };
 
-// Globals
-int    EventNum;
-int    RunNum;
-int    refMult;
-int    numberOfPrimaryVertices;
-int    zdcCoincidenceRate;
-int    trigger;
-double zdcUnAttenuatedEast;
-double zdcUnAttenuatedWest;
-float  VertexX;
-float  VertexY;
-float  VertexZ;
-int    numFiles;
-float  vpdVz;
-int    TOFmult;
-int    Multiplicity;
-
 
 //  Centrality
-int  myCentral;
+int myCentral;
+int cenBin[3000];
 int  zdcHold[10];
 char zdcName[10][200];
 int  iRun;
@@ -73,16 +64,57 @@ char name[200];
 
 // Prototypes
 void balance_main(void);
-//void initCanvas(void);
 void initHists(void);
-//void showItAll();
 void cal_v2(void);
+
+float getRefMultCorr(int RefMult, float z, int RunNum, int zdc);
+void setMyCenCuts(void);
+void initWeights(int);
+int getSagita(int,float);
+float getWeight(float,float,float,int,int);
+void initCanvas(void);
+void showItAll();
 
 void balance_main(void) {
     FILE *fNames;
-    FILE *fd;
-    char dataFile[200];
-    int iFile;
+    FILE *fd,*fh;
+	char headerFile[200];
+	char dataFile[200];
+    int iFile,iEvent;
+
+// Header information
+	int EventNum;
+	int RunNum;
+	int refMult;
+	int numberOfPrimaryVertices;
+	int zdcCoincidenceRate;
+	double zdcUnAttenuatedEast;
+	double zdcUnAttenuatedWest;
+	float VertexX;
+	float VertexY;
+	float VertexZ;
+	int goodMult;
+	int numFiles;
+	float vpdVz;
+	int TOFmult;
+	int TOFmatchedTr;
+	int trigger;
+	int NtracksGlobal;    
+    // Event information
+	int EventNumd;
+	int RunNumd;
+	short PID;
+	float pt;
+	float eta;
+	float phi;
+	float Dca;
+	
+	int refMultCorr;
+	int Multiplicity;
+	int Charge;
+	int mySagita;
+	
+	
 
     int totalNumberOfEvents;
     int myDisplay;
@@ -110,24 +142,35 @@ void balance_main(void) {
     myDisplay=1000000;
     myLocal=0;
     totalNumberOfEvents=0;
+    day=dayHold=0;
 
     TFile saveFile("v2_2.root","RECREATE","Check of Regular Events");
 
-    //	setMyCenCuts();
-    //	initCanvas();
+    setMyCenCuts();
+    initCanvas();
     initHists();
 
-    fNames=fopen("../good_runs_raw.txt","r");
+    fNames=fopen("good_runs_final.txt","r");
     fscanf(fNames,"%d",&numFiles);
     cout << "We will read " << numFiles << " files" << endl;
 
     for(iFile=0; iFile<numFiles; iFile++) {
-        fscanf(fNames,"%s",&dataFile);
-        cout << "Begin file " << iFile+1 << ", " << dataFile << endl;
-        fd=fopen(dataFile,"rb");
-        cout << "Files open" << endl;
+		fscanf(fNames,"%s",dataFile);
+		cout << "Reading data file number " << iFile+1 << " called " << dataFile << endl;
+		fscanf(fNames,"%s",headerFile);
+		cout << "Reading header file number " << iFile+1 << " called " << headerFile << endl;
+		fd=fopen(dataFile,"rb");
+		if(fd == NULL){
+			cout << "Unable to open data file, exiting" << endl;
+			exit(0);
+		}
+		fh=fopen(headerFile,"rb");
+		if(fh == NULL){
+			cout << "Unable to open header file, exiting" << endl;
+			exit(0);
+		}
 
-        fread(&EventNum,sizeof(int),1,fd);
+        fread(&EventNum,sizeof(int),1,fh);
         while(!feof(fd)) { //read each event
             fread(&RunNum,sizeof(int),1,fh);
             fread(&zdcUnAttenuatedEast,sizeof(double),1,fh);
@@ -150,7 +193,16 @@ void balance_main(void) {
 
             fread(&EventNumd,sizeof(int),1,fd);
             fread(&RunNumd,sizeof(int),1,fd);
-            //  		      cout << "EventNum ==  " <<EventNum << " EventNumd == " << EventNumd << "RunNum ==  " <<RunNum << " RunNumd == " << RunNumd << endl;
+//    cout << "EventNum ==  " <<EventNum << " EventNumd == " << EventNumd << "RunNum ==  " <<RunNum << " RunNumd == " << RunNumd << endl;
+            
+            day=(int)(RunNum/1000)%1000;
+			if(day!=dayHold){
+				cout << "Starting new day " << day << endl;
+				initWeights(day);
+				showItAll();
+				dayHold=day;	
+			}
+			
             if(EventNum != EventNumd) {
                 cout<<"****************** You are in big trouble ***********" << endl;
                 cout << "Header and track do not match,exiting............." << endl;
@@ -179,7 +231,7 @@ void balance_main(void) {
                 }
             }
 
-            for (int p = 0; p < pMax; ++n) {
+            for (int p = 0; p < pMax; ++p) {
                 for (int k = 0; k < kMax; ++k) {
                     S[p][k] = 0.0;
                 }
@@ -201,8 +253,12 @@ void balance_main(void) {
                 //          cout << "pt = " << pt<< " ,eta = " << eta<< " ,phi = " << phi << endl;
 
                 if(fabs(eta)<1.0) Multiplicity++;
-
+				if(PID>0) Charge=1;
+				if(PID<0) Charge=-1;
+                mySagita=getSagita(Charge,pt);
+                
                 if((pt > 0.2) && (pt < 2.0) && (fabs(eta) < 1.0)) {
+                
 
 #ifdef PARTICLE_WEIGHT
                     weight = getWeight(pt,eta,phi,mySagita,myCentral); // read each track's weight
@@ -213,7 +269,7 @@ void balance_main(void) {
                         }
                     }
 
-                    for (int p = 0; p < pMax; ++n) { // S matrix is not ready
+                    for (int p = 0; p < pMax; ++p) { // S matrix is not ready
                         for (int k = 0; k < kMax; ++k) {
                             S[p][k] += TMath::Power(weight, k); // TODO, optimize speed
                         }
@@ -237,7 +293,7 @@ void balance_main(void) {
                 }
             }
 
-            for (int p = 0; p < pMax; ++n) { // S matrix is ready
+            for (int p = 0; p < pMax; ++p) { // S matrix is ready
                 for (int k = 0; k < kMax; ++k) {
                     S[p][k] = TMath::Power(S[p][k], p);
                 }
@@ -249,8 +305,8 @@ void balance_main(void) {
 #ifdef PARTICLE_WEIGHT
                 double M1    = S[1][1];
                 double M11   = S[2][1] - S[1][2];
-                double M111  = S[3][1] - 3*S[1][2]*S[1][1] + 2*S[1]*[3];
-                double M1111 = S[4][1] - 6*S[1][2]*S[2][1] + 8*S[1][3]*S[1][1] + 3*S[2]*[2] - 6*S[1][4];
+                double M111  = S[3][1] - 3*S[1][2]*S[1][1] + 2*S[1][3];
+                double M1111 = S[4][1] - 6*S[1][2]*S[2][1] + 8*S[1][3]*S[1][1] + 3*S[2][2] - 6*S[1][4];
 
 #ifdef MULT_WEIGHT
                 double EventWeight1    = M1   ;
@@ -277,7 +333,7 @@ void balance_main(void) {
                 TComplex C4_5 = Q[n][1] / M1;
                 TComplex C11  = (Q[n][1]*Q[n][1] - Q[2*n][2]) / M11;
                 TComplex C12  = ( Q[n][1]*QStar[n][1]*QStar[n][1] - Q[n][1]*QStar[2*n][2]
-                                  - 2*S[1][2]*QStar[n][1] + 2*QStar[n][3] ) / M111;
+                                  - TComplex(2.0, 0)*S[1][2]*QStar[n][1] + TComplex(2.0, 0)*QStar[n][3] ) / M111;
                 
                 // reuse the histograms for the same terms with out particle weights
                 TComplex& C2_3  = C4_5;
@@ -333,7 +389,7 @@ void balance_main(void) {
 
             }
 
-            fread(&EventNum,sizeof(int),1,fd);
+            fread(&EventNum,sizeof(int),1,fh);
         }
         fclose(fd);
     }
@@ -468,17 +524,308 @@ void cal_v2() {
 
 }
 
-/*
+
+
+int getSagita(int Charge, float pt){
+
+ 		float sagita = (20.*pt/3.) - sqrt(pow(20.*pt/3.,2.) - pow(0.75,2.));
+        sagita *= Charge;
+        int mySagita;
+        if(sagita<-0.20)mySagita=0;
+        else if(sagita<-0.15)mySagita=1;
+        else if(sagita<-0.10)mySagita=2;
+        else if(sagita<-0.05)mySagita=3;
+        else if(sagita<-0.00)mySagita=4;
+        else if(sagita< 0.05)mySagita=5;
+        else if(sagita< 0.10)mySagita=6;
+        else if(sagita< 0.15)mySagita=7;
+        else if(sagita< 0.20)mySagita=8;
+        else mySagita=9;
+        
+        return mySagita;
+}
+
+float getRefMultCorr(int RefMult, float z, int RunNum, int zdc){
+      
+	float par0l,par1l;      
+    float par0,par1,par2,par3,par4,par5,par6,par7;
+
+	if((RunNum>=12126101)&&(RunNum<=12138024)){  
+		par0l = 183.9;
+		par1l = -0.2811;
+  
+  		par0 = 544.168;
+  		par1 = -0.0611001;
+  		par2 = 0.0027107;
+  		par3 = 0;
+  		par4 = 0;
+  		par5 = 0;
+  		par6 = 0;
+  		par7 = -6.974	; // this parameter is usually 0, it takes care for an additional efficiency, usually difference between phase A and phase B parameter 0
+ 	}
+ 	
+ 	
+	if((RunNum>12146003)&&(RunNum<=12152016)){  
+		par0l = 184.8;
+		par1l = -0.134;
+  
+  		par0 = 547.277;
+  		par1 = -0.0423451;
+  		par2 = 0.00253649;
+  		par3 = 0;
+  		par4 = 0;
+  		par5 = 0;
+  		par6 = 0;
+  		par7 = -10.083	; // this parameter is usually 0, it takes care for an additional efficiency, usually difference between phase A and phase B parameter 0
+ 	}
+ 
+	if((RunNum>=12153002)&&(RunNum<=12154021)){  
+		par0l = 183.4;
+		par1l = -0.1059;
+  
+  		par0 = 538.904;
+  		par1 = -0.0600895;
+  		par2 = 0.00146384;
+  		par3 = 0;
+  		par4 = 0;
+  		par5 = 0;
+  		par6 = 0;
+  		par7 = -1.71; // this parameter is usually 0, it takes care for an additional efficiency, usually difference between phase A and phase B parameter 0
+ 	}
+ 	
+ 	if((RunNum>=12154038)&&(RunNum<=12165031)){  
+		par0l = 183.1;
+		par1l = -0.07486;
+  
+  		par0 = 537.194;
+  		par1 = -0.0743487;
+  		par2 = 0.00278037;
+  		par3 = 0;
+  		par4 = 0;
+  		par5 = 0;
+  		par6 = 0;
+  		par7 = 0; // this parameter is usually 0, it takes care for an additional efficiency, usually difference between phase A and phase B parameter 0
+ 	}
+ 	
+ 	if((RunNum>=12165037)&&(RunNum<=12171016)){  
+		par0l = 185.229;
+		par1l = -0.1916;
+  
+  		par0 = 541.24;
+  		par1 = -0.0999333;
+  		par2 = 0.00277175;
+  		par3 = 0;
+  		par4 = 0;
+  		par5 = 0;
+  		par6 = 0;
+  		par7 = -4.046; // this parameter is usually 0, it takes care for an additional efficiency, usually difference between phase A and phase B parameter 0
+ 	}
+ 
+  float correction_luminosity = 1.0/(1.0 + par1l/par0l*(float)zdc/1000.);
+  
+  float  RefMult_ref = par0; // Reference mean RefMult at z=0
+  float  RefMult_z = par0 + par1*z + par2*z*z + par3*z*z*z + par4*z*z*z*z + par5*z*z*z*z*z + par6*z*z*z*z*z*z; // Parametrization of mean RefMult vs. z_vertex position
+  float  Hovno = 1.0; // Correction factor for RefMult, takes into account z_vertex dependence
+
+  if(RefMult_z > 0.0)
+  {
+    Hovno = (RefMult_ref + par7)/RefMult_z;
+  }
+
+	//get a number between 0 and 1
+  float r=rand()/(RAND_MAX+1.0);
+//  cout <<"r =" << r << endl;
+  float RefMult_d = (float)(RefMult)+r; // random sampling over bin width -> avoid peak structures in corrected distribution
+  float RefMult_corr  = RefMult_d*Hovno*correction_luminosity; 
+//  cout << "Input RefMult = " << RefMult << ", input z = " << z << ", RefMult_corr = " << RefMult_corr << endl;
+  return RefMult_corr ;
+}
+
+
+float getWeight(float _pt, float _eta, float _phi, int _mysagita, int _mycentral){
+
+  float constant_eff[10]={0.712, 0.761, 0.807, 0.871, 0.915, 0.929, 0.924, 0.92, 0.92, 0.92};//this pt independent part doesn't actually really matter
+  float eff_pt = constant_eff[_mycentral]/(1.+exp(-(_pt+0.1)/0.15));//2011 pt dependent efficiency parameterized
+
+  int etaBin;
+  int phiBin;
+  float nbinsx = etaPhiWeightsHist[_mysagita][_mycentral]->GetNbinsX();
+  float nbinsy = etaPhiWeightsHist[_mysagita][_mycentral]->GetNbinsY();
+  etaBin = (int)floor(nbinsx*(_eta+1.)/2.) + 1;
+  phiBin = (int)floor(nbinsy*(_phi+Pi)/(2.*Pi)) + 1;
+ float etaPhiWeight = etaPhiWeightsHist[_mysagita][_mycentral]->GetBinContent(etaBin,phiBin);
+ if(etaPhiWeight<0.001)etaPhiWeight=1.0;
+
+ return 1./(etaPhiWeight*eff_pt);
+}//end of getWeight
+
+
+
+
+
+
+void initWeights(int _day){
+ char hname[200];
+ TH1D *htmp2;
+ sprintf(hname,"phi_weight_day/day_%d.root",_day);
+ TFile weightFile(hname);
+  
+ for(int i = 0; i<10; i++){
+   for(int j = 0; j<10; j++){
+     sprintf(hname,"etaPhiWeightsHist_%d_%d",i,j);
+     TH2D *htmp = (TH2D*)weightFile.Get(hname);
+     sprintf(hname,"etaPhiWeightsHist_%d_%d",i,j);
+     etaPhiWeightsHist[i][j] = (TH2D*)htmp->Clone(hname);
+     etaPhiWeightsHist[i][j]->SetDirectory(0);
+   }
+ }//now all files are read in so I can add together some to increase statistics
+	
+	htmp2 = (TH1D*)weightFile.Get("Vz");
+	VzHist = (TH1D*)htmp2->Clone();
+	VzHist->SetDirectory(0);
+	htmp2 = (TH1D*)weightFile.Get("refMult");
+	refMultHist = (TH1D*)htmp2->Clone();
+	refMultHist->SetDirectory(0);
+
+ for(int i = 0; i<10; i++){
+   		for(int j = 0; j<10; j++){
+   	
+     		if(j>6){//2x4 rebin for centralities 7, 8, and 9
+       			etaPhiWeightsHist[i][j]->RebinY(2);//phi bins
+       			etaPhiWeightsHist[i][j]->RebinX(4);//eta bins
+     		}else if(j>4){//1x2 rebin for centralities 5 and 6
+       			etaPhiWeightsHist[i][j]->RebinY(1);//phi bins
+       			etaPhiWeightsHist[i][j]->RebinX(2);//eta bins
+     		}else{//1x1 rebin for centralities 0, 1, 2, 3, and 4
+       			etaPhiWeightsHist[i][j]->RebinY(1);//phi bins
+       			etaPhiWeightsHist[i][j]->RebinX(1);//eta bins
+     		}
+     
+     double entries = etaPhiWeightsHist[i][j]->GetEntries();
+     double xBins = etaPhiWeightsHist[i][j]->GetNbinsX();
+     double yBins = etaPhiWeightsHist[i][j]->GetNbinsY();
+     etaPhiWeightsHist[i][j]->Scale(xBins*yBins/entries);//scale to unity, inversion is done in getWeight()
+   }
+ }
+ weightFile.Close();
+
+ cout << "weights created" << endl;
+}// end of initWeights()
+
+void setMyCenCuts(){
+	int ibin;
+	int i;
+	int lower[11];
+	lower[0]=2999; // 0% // Au+Au Run11 cuts
+	lower[1]=466; // 5%
+	lower[2]=396; // 10%
+	lower[3]=281; // 20%
+	lower[4]=193; // 30%
+	lower[5]=125; // 40%
+	lower[6]=76; // 50%
+	lower[7]=43; // 60%
+	lower[8]=22; // 70%
+	lower[9]=10; // 80%
+	lower[10]=0; // 100%
+
+	for(ibin=0;ibin<10;ibin++){
+		for(i=lower[ibin+1];i<=lower[ibin];i++){
+			cenBin[i]=ibin;
+		}
+	}
+}
+
 void initCanvas(){
-	c = new TCanvas("c","STAR Data",10,30,1200,800);
+	c = new TCanvas("c","STAR Data",10,30,1200,900);
 	c->SetFillColor(0); // White canvas
 //	c->GetFrame()->SetFillColor(0); // White frame
 //	c->GetFrame()->SetBorderSize(12);
-	c->Divide(3,2);
+	c->Divide(4,4);
 
+	gStyle->SetOptStat("");
+	gStyle->SetPalette(1,0);
 	cout << "Canvas initialized" << endl;
 }
-*/
+
+void showItAll(){
+
+	char name[200];
+	sprintf(name,"Vz, day %d",day);
+	c->cd(1);
+//	gPad->SetLogy(1);
+	VzHist->SetTitle(name);
+	VzHist->Draw();
+
+
+	c->cd(2);
+	gPad->SetLogy(1);
+	refMultHist->Draw();
+	
+	
+	c->cd(3);
+//	gPad->SetLogz(1);
+	etaPhiWeightsHist[4][8]->Draw("colz");
+	
+	c->cd(4);
+//	gPad->SetLogz(1);
+	etaPhiWeightsHist[5][8]->Draw("colz");
+
+	c->cd(5);
+//	gPad->SetLogz(1);
+	etaPhiWeightsHist[0][0]->Draw("colz");
+	
+	c->cd(6);
+//	gPad->SetLogz(1);
+	etaPhiWeightsHist[4][0]->Draw("colz");
+	
+	c->cd(7);
+//	gPad->SetLogz(1);
+	etaPhiWeightsHist[5][0]->Draw("colz");
+	
+	c->cd(8);
+//	gPad->SetLogz(1);
+	etaPhiWeightsHist[9][0]->Draw("colz");
+	
+	c->cd(9);
+//	gPad->SetLogz(1);
+	etaPhiWeightsHist[0][5]->Draw("colz");
+	
+	c->cd(10);
+//	gPad->SetLogz(1);
+	etaPhiWeightsHist[4][5]->Draw("colz");
+	
+	c->cd(11);
+//	gPad->SetLogz(1);
+	etaPhiWeightsHist[5][5]->Draw("colz");
+	
+	c->cd(12);
+//	gPad->SetLogz(1);
+	etaPhiWeightsHist[9][5]->Draw("colz");
+	
+	c->cd(13);
+//	gPad->SetLogz(1);
+	etaPhiWeightsHist[0][9]->Draw("colz");
+	
+	c->cd(14);
+//	gPad->SetLogz(1);
+	etaPhiWeightsHist[4][9]->Draw("colz");
+	
+	c->cd(15);
+//	gPad->SetLogz(1);
+	etaPhiWeightsHist[5][9]->Draw("colz");
+	
+	c->cd(16);
+//	gPad->SetLogz(1);
+	etaPhiWeightsHist[9][9]->Draw("colz");
+	
+	c->Update();
+	
+	sprintf(name,"phi_weight_day/day_%d.png",day);
+	c->Print(name);
+}
+
+
+
 
 void initHists() {
 
