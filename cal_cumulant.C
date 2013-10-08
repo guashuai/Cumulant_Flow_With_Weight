@@ -112,7 +112,7 @@ void balance_main(void){
 	cout << "We will read " << numFiles << " files" << endl;
 	
 	for(iFile=0;iFile<numFiles;iFile++){
-		fscanf(fNames,"%s",&dataFile);
+		fscanf(fNames,"%s",dataFile);
 		cout << "Begin file " << iFile+1 << ", " << dataFile << endl;
 		fd=fopen(dataFile,"rb");
 		cout << "Files open" << endl;

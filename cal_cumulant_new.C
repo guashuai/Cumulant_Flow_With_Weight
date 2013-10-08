@@ -43,7 +43,7 @@ TProfile *T18Hist;
 
 TH1D *VzHist;
 TH2D *etaPhiWeightsHist[10][10];
-int Pi=3.14159265;
+double Pi=3.14159265;
 int day,dayHold;
 
 
@@ -107,8 +107,8 @@ void balance_main(void) {
 	float pt;
 	float eta;
 	float phi;
-	float Dca;
-	
+        //	float Dca;
+        
 	int refMultCorr;
 	int Multiplicity;
 	int Charge;
@@ -265,7 +265,7 @@ void balance_main(void) {
 
                     for (int n = 0; n < nMax; ++n) {
                         for (int k = 0; k < kMax; ++k) {
-                            Q[n][k] += TMath::Power(weight, k) * TComplex(1, n*phi, kTRUE); // TODO, optimize speed
+                            Q[n][k] += ( TMath::Power(weight, k) * TComplex(1.0, 1.0*n*phi, kTRUE) ); // TODO, optimize speed
                         }
                     }
 
@@ -325,7 +325,8 @@ void balance_main(void) {
                 double B8 = ( (Q[n][1]).Rho2() - S[1][2] ) / M11; 
                 double& coor22 = B8; // this is a wrong name, should use eq. number
 
-                double B9 = ( TMath::Power( Q[n][1].Rho(), 4 ) + Q[2*n][2].Rho2() - 2 * (Q[2*n][2]*QStar[n][1]*QStar[n][1]).Re()
+                double B9 = ( TMath::Power( Q[n][1].Rho(), 4 ) + Q[2*n][2].Rho2()
+                              - 2 * (Q[2*n][2]*QStar[n][1]*QStar[n][1]).Re()
                               + 8 * (Q[n][3]*QStar[n][1]).Re() - 4 * S[1][2] * Q[n][1].Rho2()
                               - 6 * S[1][4] - 2 * S[2][2] ) / M1111;
                 double& coor24 = B9;
@@ -828,6 +829,7 @@ void showItAll(){
 
 
 void initHists() {
+    TH1D::SetDefaultSumw2();    // call this if you will use errors
 
     ZDCHist = new TH1D("ZDC","ZDC",1000,0,4000);
     ZDCHist->GetXaxis()->SetTitle("ZDC");
