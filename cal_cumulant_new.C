@@ -266,13 +266,13 @@ void balance_main(void) {
 
                     for (int n = 0; n < nMax; ++n) {
                         for (int k = 0; k < kMax; ++k) {
-                            Q[n][k] += ( TMath::Power(weight, k) * std::polar(1.0, 1.0*n*phi) ); // TODO, optimize speed
+                            Q[n][k] += ( std::pow(weight, k) * std::polar(1.0, 1.0*n*phi) ); // TODO, optimize speed
                         }
                     }
 
                     for (int p = 0; p < pMax; ++p) { // S matrix is not ready
                         for (int k = 0; k < kMax; ++k) {
-                            S[p][k] += TMath::Power(weight, k); // TODO, optimize speed
+                            S[p][k] += std::pow(weight, k); // TODO, optimize speed
                         }
                     }
 #else
@@ -530,7 +530,7 @@ void cal_v2() {
 
 int getSagita(int Charge, float pt){
 
- 		float sagita = (20.*pt/3.) - sqrt(pow(20.*pt/3.,2.) - pow(0.75,2.));
+        float sagita = (20.*pt/3.) - sqrt(pow(20.*pt/3.,2.) - pow(0.75,2.));
         sagita *= Charge;
         int mySagita;
         if(sagita<-0.20)mySagita=0;
