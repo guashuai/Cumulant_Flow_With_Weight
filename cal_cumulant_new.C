@@ -328,7 +328,7 @@ void balance_main(void) {
                 double B9 = ( TMath::Power( Q[n][1].Rho(), 4 ) + Q[2*n][2].Rho2()
                               - 2 * (Q[2*n][2]*QStar[n][1]*QStar[n][1]).Re()
                               + 8 * (Q[n][3]*QStar[n][1]).Re() - 4 * S[1][2] * Q[n][1].Rho2()
-                              - 6 * S[1][4] - 2 * S[2][2] ) / M1111;
+                              - 6 * S[1][4] + 2 * S[2][2] ) / M1111;
                 double& coor24 = B9;
 
                 TComplex C4_5 = Q[n][1] / M1;
