@@ -17,7 +17,8 @@
 #include <TPad.h>
 #include <TFile.h>
 #include <TStyle.h>
-#include <TComplex.h>
+#include "TComplex.h"
+#include <complex>
 
 using namespace std;
 #endif
@@ -78,41 +79,41 @@ void showItAll();
 void balance_main(void) {
     FILE *fNames;
     FILE *fd,*fh;
-	char headerFile[200];
-	char dataFile[200];
+    char headerFile[200];
+    char dataFile[200];
     int iFile,iEvent;
 
-// Header information
-	int EventNum;
-	int RunNum;
-	int refMult;
-	int numberOfPrimaryVertices;
-	int zdcCoincidenceRate;
-	double zdcUnAttenuatedEast;
-	double zdcUnAttenuatedWest;
-	float VertexX;
-	float VertexY;
-	float VertexZ;
-	int goodMult;
-	int numFiles;
-	float vpdVz;
-	int TOFmult;
-	int TOFmatchedTr;
-	int trigger;
-	int NtracksGlobal;    
+    // Header information
+    int EventNum;
+    int RunNum;
+    int refMult;
+    int numberOfPrimaryVertices;
+    int zdcCoincidenceRate;
+    double zdcUnAttenuatedEast;
+    double zdcUnAttenuatedWest;
+    float VertexX;
+    float VertexY;
+    float VertexZ;
+    int goodMult;
+    int numFiles;
+    float vpdVz;
+    int TOFmult;
+    int TOFmatchedTr;
+    int trigger;
+    int NtracksGlobal;    
     // Event information
-	int EventNumd;
-	int RunNumd;
-	short PID;
-	float pt;
-	float eta;
-	float phi;
-        //	float Dca;
+    int EventNumd;
+    int RunNumd;
+    short PID;
+    float pt;
+    float eta;
+    float phi;
+    //	float Dca;
         
-	int refMultCorr;
-	int Multiplicity;
-	int Charge;
-	int mySagita;
+    int refMultCorr;
+    int Multiplicity;
+    int Charge;
+    int mySagita;
 	
 	
 
@@ -127,17 +128,17 @@ void balance_main(void) {
     const int kMax = 5;
     const int pMax = 5;
     
-    TComplex Q[nMax][kMax];     // Q_{n, k} = \sum w_i^k exp(i n \phi_i)
-    TComplex QStar[nMax][kMax];     // complex conjugate of Q
-    double   S[pMax][kMax];     // S_{p, k} = (\sum w_i^k)^p
+    complex<double> Q[nMax][kMax]; // Q_{n, k} = \sum w_i^k exp(i n \phi_i)
+    complex<double> QStar[nMax][kMax]; // complex conjugate of Q
+    double          S[pMax][kMax]; // S_{p, k} = (\sum w_i^k)^p
 #else    
-    double sin2phiSum;
-    double cos2phiSum;
-    double sin4phiSum;
-    double cos4phiSum;
+    double          sin2phiSum;
+    double          cos2phiSum;
+    double          sin4phiSum;
+    double          cos4phiSum;
 #endif // m    
     //  Numbers for each event
-    int num_tracks;
+    int             num_tracks;
 
     myDisplay=1000000;
     myLocal=0;
@@ -155,20 +156,20 @@ void balance_main(void) {
     cout << "We will read " << numFiles << " files" << endl;
 
     for(iFile=0; iFile<numFiles; iFile++) {
-		fscanf(fNames,"%s",dataFile);
-		cout << "Reading data file number " << iFile+1 << " called " << dataFile << endl;
-		fscanf(fNames,"%s",headerFile);
-		cout << "Reading header file number " << iFile+1 << " called " << headerFile << endl;
-		fd=fopen(dataFile,"rb");
-		if(fd == NULL){
-			cout << "Unable to open data file, exiting" << endl;
-			exit(0);
-		}
-		fh=fopen(headerFile,"rb");
-		if(fh == NULL){
-			cout << "Unable to open header file, exiting" << endl;
-			exit(0);
-		}
+        fscanf(fNames,"%s",dataFile);
+        cout << "Reading data file number " << iFile+1 << " called " << dataFile << endl;
+        fscanf(fNames,"%s",headerFile);
+        cout << "Reading header file number " << iFile+1 << " called " << headerFile << endl;
+        fd=fopen(dataFile,"rb");
+        if(fd == NULL){
+            cout << "Unable to open data file, exiting" << endl;
+            exit(0);
+        }
+        fh=fopen(headerFile,"rb");
+        if(fh == NULL){
+            cout << "Unable to open header file, exiting" << endl;
+            exit(0);
+        }
 
         fread(&EventNum,sizeof(int),1,fh);
         while(!feof(fd)) { //read each event
@@ -193,15 +194,15 @@ void balance_main(void) {
 
             fread(&EventNumd,sizeof(int),1,fd);
             fread(&RunNumd,sizeof(int),1,fd);
-//    cout << "EventNum ==  " <<EventNum << " EventNumd == " << EventNumd << "RunNum ==  " <<RunNum << " RunNumd == " << RunNumd << endl;
+            //    cout << "EventNum ==  " <<EventNum << " EventNumd == " << EventNumd << "RunNum ==  " <<RunNum << " RunNumd == " << RunNumd << endl;
             
             day=(int)(RunNum/1000)%1000;
-			if(day!=dayHold){
-				cout << "Starting new day " << day << endl;
-				initWeights(day);
-				showItAll();
-				dayHold=day;	
-			}
+            if(day!=dayHold){
+                cout << "Starting new day " << day << endl;
+                initWeights(day);
+                showItAll();
+                dayHold=day;	
+            }
 			
             if(EventNum != EventNumd) {
                 cout<<"****************** You are in big trouble ***********" << endl;
@@ -227,7 +228,7 @@ void balance_main(void) {
 #ifdef PARTICLE_WEIGHT
             for (int n = 0; n < nMax; ++n) {
                 for (int k = 0; k < kMax; ++k) {
-                    Q[n][k] = TComplex(0, 0);
+                    Q[n][k] = complex<double>(0., 0.);
                 }
             }
 
@@ -253,8 +254,8 @@ void balance_main(void) {
                 //          cout << "pt = " << pt<< " ,eta = " << eta<< " ,phi = " << phi << endl;
 
                 if(fabs(eta)<1.0) Multiplicity++;
-				if(PID>0) Charge=1;
-				if(PID<0) Charge=-1;
+                if(PID>0) Charge=1;
+                if(PID<0) Charge=-1;
                 mySagita=getSagita(Charge,pt);
                 
                 if((pt > 0.2) && (pt < 2.0) && (fabs(eta) < 1.0)) {
@@ -265,7 +266,7 @@ void balance_main(void) {
 
                     for (int n = 0; n < nMax; ++n) {
                         for (int k = 0; k < kMax; ++k) {
-                            Q[n][k] += ( TMath::Power(weight, k) * TComplex(1.0, 1.0*n*phi, kTRUE) ); // TODO, optimize speed
+                            Q[n][k] += ( TMath::Power(weight, k) * std::polar(1.0, 1.0*n*phi) ); // TODO, optimize speed
                         }
                     }
 
@@ -289,7 +290,7 @@ void balance_main(void) {
 #ifdef PARTICLE_WEIGHT
             for (int n = 0; n < nMax; ++n) {
                 for (int k = 0; k < kMax; ++k) {
-                    QStar[n][k] = TComplex::Conjugate( Q[n][k] );
+                    QStar[n][k] = std::conj( Q[n][k] );
                 }
             }
 
@@ -322,36 +323,36 @@ void balance_main(void) {
 
                 const int n = 2; // flow harmonics
 
-                double B8 = ( (Q[n][1]).Rho2() - S[1][2] ) / M11; 
+                double B8 = ( std::norm(Q[n][1]) - S[1][2] ) / M11; 
                 double& coor22 = B8; // this is a wrong name, should use eq. number
 
-                double B9 = ( TMath::Power( Q[n][1].Rho(), 4 ) + Q[2*n][2].Rho2()
-                              - 2 * (Q[2*n][2]*QStar[n][1]*QStar[n][1]).Re()
-                              + 8 * (Q[n][3]*QStar[n][1]).Re() - 4 * S[1][2] * Q[n][1].Rho2()
+                double B9 = ( TMath::Power( std::abs(Q[n][1]), 4 ) + std::norm(Q[2*n][2])
+                              - 2 * std::real(Q[2*n][2]*QStar[n][1]*QStar[n][1])
+                              + 8 * std::real(Q[n][3]*QStar[n][1]) - 4 * S[1][2] * std::norm(Q[n][1])
                               - 6 * S[1][4] - 2 * S[2][2] ) / M1111;
                 double& coor24 = B9;
 
-                TComplex C4_5 = Q[n][1] / M1;
-                TComplex C11  = (Q[n][1]*Q[n][1] - Q[2*n][2]) / M11;
-                TComplex C12  = ( Q[n][1]*QStar[n][1]*QStar[n][1] - Q[n][1]*QStar[2*n][2]
-                                  - TComplex(2.0, 0)*S[1][2]*QStar[n][1] + TComplex(2.0, 0)*QStar[n][3] ) / M111;
+                complex<double> C4_5 = Q[n][1] / M1;
+                complex<double> C11  = (Q[n][1]*Q[n][1] - Q[2*n][2]) / M11;
+                complex<double> C12  = ( Q[n][1]*QStar[n][1]*QStar[n][1] - Q[n][1]*QStar[2*n][2]
+                                         - 2.0*S[1][2]*QStar[n][1] + 2.0*QStar[n][3] ) / M111;
                 
                 // reuse the histograms for the same terms with out particle weights
-                TComplex& C2_3  = C4_5;
-                TComplex& C7_8  = C11;
-                TComplex& C9_10 = C12;
+                complex<double>& C2_3  = C4_5;
+                complex<double>& C7_8  = C11;
+                complex<double>& C9_10 = C12;
                 
                 // number of conbination have been divided
                 // apply event weights, just in case non-unit weigts are needed
                 T16Hist->Fill(refMult, coor22, EventWeight11); 
                 T18Hist->Fill(refMult, coor24, EventWeight1111);
 
-                C2Hist->Fill(refMult,  C2_3.Re(),  EventWeight1   );
-                C3Hist->Fill(refMult,  C2_3.Im(),  EventWeight1   );
-                C7Hist->Fill(refMult,  C7_8.Re(),  EventWeight11  );
-                C8Hist->Fill(refMult,  C7_8.Im(),  EventWeight11  );
-                C9Hist->Fill(refMult,  C9_10.Re(), EventWeight111 );
-                C10Hist->Fill(refMult, C9_10.Im(), EventWeight111 );
+                C2Hist->Fill(refMult,  C2_3.real(),  EventWeight1   );
+                C3Hist->Fill(refMult,  C2_3.imag(),  EventWeight1   );
+                C7Hist->Fill(refMult,  C7_8.real(),  EventWeight11  );
+                C8Hist->Fill(refMult,  C7_8.imag(),  EventWeight11  );
+                C9Hist->Fill(refMult,  C9_10.real(), EventWeight111 );
+                C10Hist->Fill(refMult, C9_10.imag(), EventWeight111 );
 #else
                 // ref cumulants w/o particle weight
                 Double_t M       = num_tracks;
