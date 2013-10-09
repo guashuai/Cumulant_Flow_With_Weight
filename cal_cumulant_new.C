@@ -266,7 +266,7 @@ void balance_main(void) {
 
                     for (int n = 0; n < nMax; ++n) {
                         for (int k = 0; k < kMax; ++k) {
-                            Q[n][k] += ( std::pow(weight, k) * std::polar(1.0, 1.0*n*phi) ); // TODO, optimize speed
+                            Q[n][k] += ( std::pow(weight, k) * std::polar(1.0, n*phi) ); // TODO, optimize speed
                         }
                     }
 
@@ -326,10 +326,10 @@ void balance_main(void) {
                 double B8 = ( std::norm(Q[n][1]) - S[1][2] ) / M11; 
                 double& coor22 = B8; // this is a wrong name, should use eq. number
 
-                double B9 = ( TMath::Power( std::abs(Q[n][1]), 4 ) + std::norm(Q[2*n][2])
-                              - 2 * std::real(Q[2*n][2]*QStar[n][1]*QStar[n][1])
-                              + 8 * std::real(Q[n][3]*QStar[n][1]) - 4 * S[1][2] * std::norm(Q[n][1])
-                              - 6 * S[1][4] - 2 * S[2][2] ) / M1111;
+                double B9 = ( std::pow( std::abs(Q[n][1]), 4 ) + std::norm( Q[2*n][2] )
+                              - 2 * std::real( Q[2*n][2]*QStar[n][1]*QStar[n][1] )
+                              + 8 * std::real( Q[n][3]*QStar[n][1] ) - 4 * S[1][2] * std::norm( Q[n][1] )
+                              - 6 * S[1][4] + 2 * S[2][2] ) / M1111;
                 double& coor24 = B9;
 
                 complex<double> C4_5 = Q[n][1] / M1;
