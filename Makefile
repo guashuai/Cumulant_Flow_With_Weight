@@ -1,7 +1,7 @@
 CXX = g++
-CXXFLAGS = -Wall -fPIC -O3 -g
+CXXFLAGS = -Wall -fPIC -O3
 
-LD = g++
+LD = $(CXX)
 LDFLAGS = 
 
 ROOTFLAGS   = $(shell root-config --cflags)
